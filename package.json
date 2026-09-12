@@ -19,7 +19,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "resolve": "tsx src/cli.ts"
+    "resolve": "tsx src/cli.ts",
+    "prepare": "npm run build"
   },
   "engines": {
     "node": ">=20"

@@ -21,7 +21,7 @@ describe("isTelegramUrl", () => {
 
 describe("sanitizeUrlForDiagnostics", () => {
   it("redacts sensitive query values while preserving useful routing data", () => {
-    const input = "https://redirect.example/next?step=2&token=secret-value&session_id=session-secret&sig=signature";
+    const input = "https://user:password@redirect.example/next?step=2&token=secret-value&session_id=session-secret&sig=signature";
     const output = sanitizeUrlForDiagnostics(input);
 
     expect(output).toBe("https://redirect.example/next?step=2&token=%5BREDACTED%5D&session_id=%5BREDACTED%5D&sig=%5BREDACTED%5D");

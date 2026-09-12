@@ -25,6 +25,8 @@ function normalizeQueryKey(value: string): string {
 
 export function sanitizeUrlForDiagnostics(value: string): string {
   const url = new URL(value);
+  url.username = "";
+  url.password = "";
   for (const key of [...url.searchParams.keys()]) {
     if (SENSITIVE_QUERY_KEYS.has(normalizeQueryKey(key))) {
       url.searchParams.set(key, "[REDACTED]");

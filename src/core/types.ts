@@ -21,4 +21,5 @@ export interface ResolveOptions {
   fetchImpl?: typeof fetch;
   maxHops?: number;
   logger?: (message: string) => void;
+  resolveHost?: (hostname: string) => Promise<string[]>;
 }

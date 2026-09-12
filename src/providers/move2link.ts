@@ -1,4 +1,5 @@
 import { SecurityChallengeError } from "../core/errors.js";
+import { assertSafeRedirectUrl } from "../core/network.js";
 import type { ResolutionHop, ResolveOptions, ResolveResult } from "../core/types.js";
 import { isTelegramUrl, sanitizeUrlForDiagnostics } from "../core/urls.js";
 
@@ -39,7 +40,8 @@ export async function resolveMove2link(
       },
     });
 
-    const locationHeader = response.headers.get("location");
+    const isRedirect = response.status >= 300 && response.status < 400;
+    const locationHeader = isRedirect ? response.headers.get("location") : null;
     const location = locationHeader ? new URL(locationHeader, current).href : undefined;
     const diagnosticLocation = location
       ? (isTelegramUrl(location) ? location : sanitizeUrlForDiagnostics(location))
@@ -64,6 +66,7 @@ export async function resolveMove2link(
         log(`[shortlinx:move2link] completed in ${elapsedMs} ms`);
         return { originalUrl, finalUrl: location, provider: "move2link", hops, method: "http", elapsedMs };
       }
+      await assertSafeRedirectUrl(location, options.resolveHost);
       current = location;
       continue;
     }

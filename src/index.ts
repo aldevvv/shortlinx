@@ -10,6 +10,9 @@ export async function resolveShortlink(
   options: ResolveOptions = {},
 ): Promise<ResolveResult> {
   const url = new URL(input);
+  if (url.username || url.password) {
+    throw new Error("Shortlink URL must not contain embedded credentials");
+  }
   if (url.protocol !== "https:" || !["move2link.co", "www.move2link.co"].includes(url.hostname.toLowerCase())) {
     throw new Error(`Unsupported shortlink provider: ${url.hostname}`);
   }

@@ -81,7 +81,7 @@ tests/
   urls.test.ts            destination-domain validation
 ```
 
-The resolver follows redirects manually so each transition can be recorded without leaking session material. Provider-specific behavior is isolated from the public interface.
+The resolver follows redirects manually so each transition can be recorded without leaking session material. Intermediate diagnostic URLs redact embedded credentials, sensitive query values, and fragments. Redirect targets are checked against local, private, reserved, and non-routable network ranges before they can be fetched. Provider-specific behavior is isolated from the public interface.
 
 ## Development
 

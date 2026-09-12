@@ -10,7 +10,10 @@ describe("resolveShortlink", () => {
       .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: "/step" } }))
       .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: telegram } }));
 
-    const result = await resolveShortlink("https://move2link.co/example", { fetchImpl });
+    const result = await resolveShortlink("https://move2link.co/example", {
+      fetchImpl,
+      resolveHost: async () => ["203.0.114.10"],
+    });
 
     expect(result.finalUrl).toBe(telegram);
     expect(result.provider).toBe("move2link");
@@ -42,5 +45,45 @@ describe("resolveShortlink", () => {
   it("rejects unsupported input hosts", async () => {
     await expect(resolveShortlink("https://example.com/x"))
       .rejects.toThrow("Unsupported shortlink provider");
+  });
+
+  it("rejects credentials embedded in the initial URL", async () => {
+    await expect(resolveShortlink("https://user:password@move2link.co/x"))
+      .rejects.toThrow("must not contain embedded credentials");
+  });
+
+  it("blocks redirects to private network addresses before fetching them", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(null, {
+        status: 302,
+        headers: { location: "http://127.0.0.1:8080/admin" },
+      }));
+
+    await expect(resolveShortlink("https://move2link.co/example", { fetchImpl }))
+      .rejects.toThrow("Unsafe redirect destination");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks redirects whose hostname resolves to a private address", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(new Response(null, {
+      status: 302,
+      headers: { location: "https://internal.example/admin" },
+    }));
+
+    await expect(resolveShortlink("https://move2link.co/example", {
+      fetchImpl,
+      resolveHost: async () => ["10.0.0.8"],
+    })).rejects.toThrow("Unsafe redirect destination");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not treat Location on a 200 response as a redirect", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(new Response("ordinary page", {
+      status: 200,
+      headers: { location: telegram },
+    }));
+
+    await expect(resolveShortlink("https://move2link.co/example", { fetchImpl }))
+      .rejects.toThrow("did not resolve to a Telegram URL");
   });
 });
