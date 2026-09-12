@@ -3,7 +3,7 @@ import { resolveMove2link } from "./providers/move2link.js";
 
 export type { ResolutionHop, ResolveOptions, ResolveResult } from "./core/types.js";
 export { SecurityChallengeError } from "./core/errors.js";
-export { isTelegramUrl } from "./core/urls.js";
+export { isTelegramUrl, sanitizeUrlForDiagnostics } from "./core/urls.js";
 
 export async function resolveShortlink(
   input: string,

@@ -1,6 +1,6 @@
 import { SecurityChallengeError } from "../core/errors.js";
 import type { ResolutionHop, ResolveOptions, ResolveResult } from "../core/types.js";
-import { isTelegramUrl } from "../core/urls.js";
+import { isTelegramUrl, sanitizeUrlForDiagnostics } from "../core/urls.js";
 
 const CHALLENGE_MARKERS = [
   "cf-chl-",
@@ -28,7 +28,8 @@ export async function resolveMove2link(
   let current = originalUrl;
 
   for (let index = 0; index < maxHops; index += 1) {
-    log(`[shortlinx:move2link] opening ${current}`);
+    const diagnosticCurrent = sanitizeUrlForDiagnostics(current);
+    log(`[shortlinx:move2link] opening ${diagnosticCurrent}`);
     const response = await request(current, {
       method: "GET",
       redirect: "manual",
@@ -40,11 +41,14 @@ export async function resolveMove2link(
 
     const locationHeader = response.headers.get("location");
     const location = locationHeader ? new URL(locationHeader, current).href : undefined;
+    const diagnosticLocation = location
+      ? (isTelegramUrl(location) ? location : sanitizeUrlForDiagnostics(location))
+      : undefined;
     const hop: ResolutionHop = {
-      url: current,
+      url: diagnosticCurrent,
       method: "GET",
       status: response.status,
-      ...(location ? { location } : {}),
+      ...(diagnosticLocation ? { location: diagnosticLocation } : {}),
       ...(response.headers.get("content-type")
         ? { contentType: response.headers.get("content-type")! }
         : {}),
@@ -53,7 +57,7 @@ export async function resolveMove2link(
     log(`[shortlinx:move2link] status: ${response.status}`);
 
     if (location) {
-      log(`[shortlinx:move2link] redirect: ${location}`);
+      log(`[shortlinx:move2link] redirect: ${diagnosticLocation}`);
       if (isTelegramUrl(location)) {
         const elapsedMs = Math.round(performance.now() - started);
         log(`[shortlinx:move2link] final destination: ${location}`);
@@ -67,8 +71,8 @@ export async function resolveMove2link(
     const body = await response.text();
     if (isSecurityChallenge(response.status, body)) {
       throw new SecurityChallengeError(
-        `Mandatory security challenge encountered at ${current}; refusing to bypass it`,
-        current,
+        `Mandatory security challenge encountered at ${diagnosticCurrent}; refusing to bypass it`,
+        diagnosticCurrent,
         response.status,
       );
     }
@@ -78,7 +82,7 @@ export async function resolveMove2link(
       return { originalUrl, finalUrl: current, provider: "move2link", hops, method: "http", elapsedMs };
     }
 
-    throw new Error(`move2link flow stopped at ${current} and did not resolve to a Telegram URL`);
+    throw new Error(`move2link flow stopped at ${diagnosticCurrent} and did not resolve to a Telegram URL`);
   }
 
   throw new Error(`move2link exceeded the ${maxHops}-hop safety limit`);
